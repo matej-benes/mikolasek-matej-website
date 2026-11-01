@@ -44,7 +44,7 @@
 <body>
   <header class="wrap">
     <a class="brand" href="#top" style="text-decoration:none">MM / Mikolášek Matěj</a>
-    <nav aria-label="Hlavní navigace"><a href="#hudba">Hudba</a><a href="#interpret">O interpretovi</a><a href="#profily">Profily</a></nav>
+    <nav aria-label="Hlavní navigace"><a href="#hudba">Hudba</a><a href="#interpret">O interpretovi</a><a href="#profily">Profily</a><a href="#akce">Akce</a></nav>
   </header>
   <main id="top">
     <div class="wrap hero"><div>
@@ -55,6 +55,10 @@
     <section id="hudba"><div class="wrap">
       <div class="section-head"><h2>Hudba</h2><p class="sub">Aktuální profil interpreta na Spotify. Otevřete ho a poslechněte si dostupná vydání.</p></div>
       <div class="music"><iframe title="Mikolášek Matěj na Spotify" src="https://open.spotify.com/embed/artist/1GTlcK25rndAZLwFWRQp6C?utm_source=generator&amp;theme=0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>
+    </div></section>
+    <section id="akce"><div class="wrap">
+      <div class="section-head"><h2>Nadcházející akce</h2><p class="sub">Koncerty a další veřejná vystoupení. Aktuální informace budou průběžně doplňovány.</p></div>
+      <div id="events-list" class="links" style="grid-template-columns:1fr"><div class="note">Načítám plánované akce…</div></div>
     </div></section>
     <section id="interpret"><div class="wrap bio">
       <div><div class="eyebrow">O interpretovi</div><h2>Vlastní hudba.<br>Vlastní cesta.</h2></div>
@@ -72,5 +76,28 @@
   </main>
   <footer class="wrap"><span>© <span id="year"></span> Mikolášek Matěj</span><span>Oficiální stránky hudebního interpreta</span></footer>
   <script>document.getElementById("year").textContent=new Date().getFullYear()</script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/+esm";
+    const db = createClient("https://vdzadpsbkjetwgvadbgf.supabase.co", "sb_publishable_437t9eM7Lg4HsNcZSdSOvw_AXoDvESD");
+    const root = document.getElementById("events-list");
+    const escapeHtml = (value="") => String(value).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const { data, error } = await db.from("artist_events").select("id,title,event_date,venue,description,poster_url,ticket_url").eq("status","published").gte("event_date",new Date().toISOString()).order("event_date",{ascending:true});
+    if (error) {
+      root.innerHTML = '<div class="note">Akce se momentálně nepodařilo načíst. Zkuste to prosím později.</div>';
+    } else if (!data?.length) {
+      root.innerHTML = '<div class="note">Momentálně nejsou zveřejněné žádné nadcházející akce.</div>';
+    } else {
+      root.innerHTML = data.map(event => {
+        const date = new Date(event.event_date);
+        const dateLabel = new Intl.DateTimeFormat("cs-CZ",{dateStyle:"long",timeStyle:"short"}).format(date);
+        return '<article class="note" style="display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap">'
+          + (event.poster_url ? '<img src="'+escapeHtml(event.poster_url)+'" alt="Plakát: '+escapeHtml(event.title)+'" loading="lazy" style="width:130px;max-width:100%;border-radius:10px;object-fit:cover">' : '')
+          + '<div style="flex:1;min-width:220px"><div class="eyebrow">'+escapeHtml(dateLabel)+'</div><h3 style="margin:8px 0;font-size:22px">'+escapeHtml(event.title)+'</h3><strong>'+escapeHtml(event.venue)+'</strong>'
+          + (event.description ? '<p style="color:var(--muted);margin:8px 0">'+escapeHtml(event.description)+'</p>' : '')
+          + (event.ticket_url ? '<a class="btn primary" style="margin-top:10px" href="'+escapeHtml(event.ticket_url)+'" target="_blank" rel="noopener">Vstupenky ↗</a>' : '')
+          + '</div></article>';
+      }).join("");
+    }
+  </script>
 </body>
 </html>
